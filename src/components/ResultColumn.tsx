@@ -4,6 +4,7 @@ import type { Document, Qrels } from '../data/types';
 interface Props {
   title: string;
   color: 'amber' | 'purple' | 'emerald';
+  description?: string;
   results: SearchResult[];
   latencyMs: number;
   corpus: Document[];
@@ -36,7 +37,7 @@ const colorMap = {
   },
 };
 
-export function ResultColumn({ title, color, results, latencyMs, corpus, query, qrels, queryId }: Props) {
+export function ResultColumn({ title, color, description, results, latencyMs, corpus, query, qrels, queryId }: Props) {
   const c = colorMap[color];
 
   const relevantDocs = queryId && qrels[queryId]
@@ -45,12 +46,15 @@ export function ResultColumn({ title, color, results, latencyMs, corpus, query, 
 
   return (
     <div className={`rounded-lg border ${c.border} ${c.bg} p-4`}>
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-1">
         <h3 className={`font-semibold ${c.text}`}>{title}</h3>
         <span className={`text-xs px-2 py-0.5 rounded-full ${c.badge}`}>
           {latencyMs.toFixed(1)} ms
         </span>
       </div>
+      {description && (
+        <p className="text-xs text-gray-500 mb-3">{description}</p>
+      )}
 
       <div className="space-y-2">
         {results.length === 0 ? (

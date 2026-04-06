@@ -13,6 +13,116 @@ import {
 } from '../evaluation/metrics';
 import { BenchmarkCharts } from './BenchmarkCharts';
 
+const METRIC_DESCRIPTIONS: Record<string, string> = {
+  'MRR@10': 'Mean Reciprocal Rank at 10 — how quickly the first relevant result appears',
+  'P@5': 'Precision at 5 — what fraction of top 5 results are relevant',
+  'R@5': 'Recall at 5 — what fraction of all relevant docs appear in top 5',
+  'NDCG@10': 'Normalized Discounted Cumulative Gain — overall ranking quality',
+  'Latency': 'Average time per query in milliseconds',
+};
+
+function MetricHeader({ label }: { label: string }) {
+  return (
+    <th className="text-right py-3 px-4 font-medium">
+      <span
+        className="text-gray-400 cursor-help border-b border-dashed border-gray-600"
+        title={METRIC_DESCRIPTIONS[label]}
+      >
+        {label}
+      </span>
+      <div className="text-xs text-gray-600 font-normal mt-0.5 max-w-[120px] ml-auto leading-tight">
+        {METRIC_DESCRIPTIONS[label]}
+      </div>
+    </th>
+  );
+}
+
+function KeyFindings({ results }: { results: BenchmarkResult[] }) {
+  const bm25 = results.find((r) => r.method === 'BM25');
+  const semantic = results.find((r) => r.method === 'Semantic');
+  const hybrid = results.find((r) => r.method === 'Hybrid');
+
+  if (!bm25 || !semantic || !hybrid) return null;
+
+  const bestMrr = [...results].sort((a, b) => b.mrrAt10 - a.mrrAt10)[0];
+  const bestP5 = [...results].sort((a, b) => b.precisionAt5 - a.precisionAt5)[0];
+  const bestR5 = [...results].sort((a, b) => b.recallAt5 - a.recallAt5)[0];
+
+  const latencyRatio = semantic.avgLatencyMs / bm25.avgLatencyMs;
+  const latencyStr =
+    latencyRatio >= 1
+      ? `${latencyRatio.toFixed(1)}x`
+      : `${(1 / latencyRatio).toFixed(1)}x`;
+  const fasterMethod = bm25.avgLatencyMs <= semantic.avgLatencyMs ? 'BM25' : 'Semantic';
+  const slowerMethod = fasterMethod === 'BM25' ? 'Semantic' : 'BM25';
+
+  const others = (exclude: string) =>
+    results
+      .filter((r) => r.method !== exclude)
+      .map((r) => `${r.method} (${r.mrrAt10.toFixed(3)})`)
+      .join(' and ');
+
+  const hybridBeatsBoth =
+    hybrid.mrrAt10 >= bm25.mrrAt10 && hybrid.mrrAt10 >= semantic.mrrAt10;
+
+  const findings: string[] = [];
+
+  findings.push(
+    `${bestMrr.method} achieves the highest MRR@10 (${bestMrr.mrrAt10.toFixed(3)}), outperforming ${others(bestMrr.method)}.`,
+  );
+
+  if (bestP5.method !== bestMrr.method) {
+    const p5Others = results
+      .filter((r) => r.method !== bestP5.method)
+      .map((r) => `${r.method} (${r.precisionAt5.toFixed(3)})`)
+      .join(' and ');
+    findings.push(
+      `${bestP5.method} leads in P@5 (${bestP5.precisionAt5.toFixed(3)}) vs ${p5Others}.`,
+    );
+  }
+
+  if (bestR5.method !== bestMrr.method && bestR5.method !== bestP5.method) {
+    const r5Others = results
+      .filter((r) => r.method !== bestR5.method)
+      .map((r) => `${r.method} (${r.recallAt5.toFixed(3)})`)
+      .join(' and ');
+    findings.push(
+      `${bestR5.method} achieves the best R@5 (${bestR5.recallAt5.toFixed(3)}) vs ${r5Others}.`,
+    );
+  }
+
+  findings.push(
+    `${fasterMethod} is ${latencyStr} faster than ${slowerMethod} search (${bm25.avgLatencyMs.toFixed(1)} ms vs ${semantic.avgLatencyMs.toFixed(1)} ms per query), but trades off retrieval quality.`,
+  );
+
+  if (hybridBeatsBoth) {
+    findings.push(
+      `Hybrid search outperforms both individual methods on MRR@10, confirming that combining BM25 and Semantic signals is beneficial for this dataset.`,
+    );
+  } else {
+    const hybridRank =
+      [...results].sort((a, b) => b.mrrAt10 - a.mrrAt10).findIndex((r) => r.method === 'Hybrid') +
+      1;
+    findings.push(
+      `Hybrid search ranks ${hybridRank === 2 ? 'second' : 'third'} in MRR@10 (${hybrid.mrrAt10.toFixed(3)}), suggesting that simple score fusion does not always outperform the best individual method.`,
+    );
+  }
+
+  return (
+    <div className="mt-8 p-5 bg-gray-800/40 border border-gray-700 rounded-lg">
+      <h3 className="text-base font-semibold text-white mb-3">Key Findings</h3>
+      <ul className="space-y-2">
+        {findings.map((finding, i) => (
+          <li key={i} className="flex gap-2 text-sm text-gray-300">
+            <span className="text-blue-400 mt-0.5 shrink-0">•</span>
+            <span>{finding}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function BenchmarkPage() {
   const { dataset, bm25Index, semanticIndex } = useData();
   const [running, setRunning] = useState(false);
@@ -108,6 +218,15 @@ export function BenchmarkPage() {
 
   return (
     <div>
+      {/* Intro section */}
+      <div className="mb-6 p-4 bg-gray-800/30 border border-gray-700/50 rounded-lg">
+        <p className="text-sm text-gray-400 leading-relaxed">
+          This benchmark evaluates all three retrieval methods across 300 test queries from the
+          SciFact dataset. Each query is a scientific claim, and the ground-truth relevant documents
+          are determined by expert human annotators.
+        </p>
+      </div>
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-bold">Benchmark</h2>
@@ -132,11 +251,11 @@ export function BenchmarkPage() {
               <thead>
                 <tr className="border-b border-gray-800">
                   <th className="text-left py-3 px-4 text-gray-400 font-medium">Method</th>
-                  <th className="text-right py-3 px-4 text-gray-400 font-medium">MRR@10</th>
-                  <th className="text-right py-3 px-4 text-gray-400 font-medium">P@5</th>
-                  <th className="text-right py-3 px-4 text-gray-400 font-medium">R@5</th>
-                  <th className="text-right py-3 px-4 text-gray-400 font-medium">NDCG@10</th>
-                  <th className="text-right py-3 px-4 text-gray-400 font-medium">Latency (ms)</th>
+                  <MetricHeader label="MRR@10" />
+                  <MetricHeader label="P@5" />
+                  <MetricHeader label="R@5" />
+                  <MetricHeader label="NDCG@10" />
+                  <MetricHeader label="Latency" />
                 </tr>
               </thead>
               <tbody>
@@ -148,7 +267,8 @@ export function BenchmarkPage() {
                     <td className="py-3 px-4 text-right font-mono">{r.recallAt5.toFixed(4)}</td>
                     <td className="py-3 px-4 text-right font-mono">{r.ndcgAt10.toFixed(4)}</td>
                     <td className="py-3 px-4 text-right font-mono">
-                      {r.avgLatencyMs.toFixed(1)} <span className="text-gray-600">± {r.stdLatencyMs.toFixed(1)}</span>
+                      {r.avgLatencyMs.toFixed(1)}{' '}
+                      <span className="text-gray-600">± {r.stdLatencyMs.toFixed(1)}</span>
                     </td>
                   </tr>
                 ))}
@@ -156,8 +276,13 @@ export function BenchmarkPage() {
             </table>
           </div>
 
+          {/* Key Findings */}
+          <KeyFindings results={results} />
+
           {/* Charts */}
-          <BenchmarkCharts results={results} />
+          <div className="mt-8">
+            <BenchmarkCharts results={results} />
+          </div>
         </>
       )}
 
