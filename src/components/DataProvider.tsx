@@ -43,34 +43,27 @@ export function DataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
 
-    const addProgress = (msg: string) => {
+    const setProgress = (msg: string) => {
       if (cancelled) return;
-      setState((prev) => ({ ...prev, progress: [...prev.progress, msg] }));
+      setState((prev) => ({ ...prev, progress: [msg] }));
     };
 
     async function init() {
       try {
-        addProgress('Loading dataset...');
+        setProgress('Loading dataset...');
         const dataset = await loadDataset();
-        addProgress(`Loaded ${dataset.corpus.length} documents, ${dataset.queries.length} queries`);
 
-        addProgress('Building BM25 index...');
+        setProgress('Building search index...');
         const texts = dataset.corpus.map((d) => d.title + ' ' + d.text);
         const bm25Index = buildBM25Index(texts);
-        addProgress('BM25 index ready');
 
-        addProgress('Loading embeddings...');
+        setProgress('Loading embeddings...');
         const embeddings = await loadEmbeddings();
         const semanticIndex = buildSemanticIndex(embeddings);
-        addProgress(`Loaded ${embeddings.length} embeddings (dim=${semanticIndex.dimension})`);
 
-        addProgress('Loading ML model for query encoding...');
-        await loadModel((p) => {
-          if (p.progress !== undefined) {
-            addProgress(`Model: ${p.status} ${Math.round(p.progress)}%`);
-          }
-        });
-        addProgress('Model ready');
+        setProgress('Loading ML model...');
+        await loadModel();
+
 
         if (!cancelled) {
           setState({

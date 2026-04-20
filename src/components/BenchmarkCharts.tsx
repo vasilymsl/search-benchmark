@@ -79,6 +79,7 @@ export function BenchmarkCharts({ results }: Props) {
                 dataKey={r.method}
                 fill={COLORS[r.method as keyof typeof COLORS]}
                 radius={[4, 4, 0, 0]}
+                isAnimationActive={false}
               />
             ))}
           </BarChart>
@@ -101,6 +102,7 @@ export function BenchmarkCharts({ results }: Props) {
               dataKey="latency"
               radius={[4, 4, 0, 0]}
               fill="#3b82f6"
+              isAnimationActive={false}
             >
               {latencyData.map((entry) => (
                 <rect key={entry.method} fill={COLORS[entry.method as keyof typeof COLORS]} />
@@ -113,8 +115,8 @@ export function BenchmarkCharts({ results }: Props) {
       {/* Quality vs Latency Scatter */}
       <div className="bg-gray-900 rounded-lg p-6 border border-gray-800">
         <h3 className="text-lg font-semibold mb-4">Quality vs Latency Trade-off</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <ScatterChart>
+        <ResponsiveContainer width="100%" height={380}>
+          <ScatterChart margin={{ top: 10, right: 30, bottom: 40, left: 10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
             <XAxis
               type="number"
@@ -122,7 +124,7 @@ export function BenchmarkCharts({ results }: Props) {
               name="Latency"
               unit=" ms"
               stroke="#9ca3af"
-              label={{ value: 'Latency (ms)', position: 'bottom', fill: '#9ca3af' }}
+              label={{ value: 'Latency (ms)', position: 'bottom', offset: 0, fill: '#9ca3af' }}
             />
             <YAxis
               type="number"
@@ -146,9 +148,10 @@ export function BenchmarkCharts({ results }: Props) {
                 name={r.method}
                 data={[scatterData.find((s) => s.method === r.method)!]}
                 fill={COLORS[r.method as keyof typeof COLORS]}
+                isAnimationActive={false}
               />
             ))}
-            <Legend />
+            <Legend verticalAlign="top" align="right" layout="vertical" wrapperStyle={{ paddingLeft: 20 }} />
           </ScatterChart>
         </ResponsiveContainer>
       </div>

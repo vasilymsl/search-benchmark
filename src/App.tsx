@@ -191,20 +191,11 @@ function AppContent() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-8">
-        <div className="text-center max-w-md">
-          <h1 className="text-2xl font-bold mb-4">Loading Search Benchmark</h1>
-          <div className="space-y-2 text-sm text-gray-400">
-            {progress.map((msg, i) => (
-              <p key={i} className={i === progress.length - 1 ? 'text-blue-400' : ''}>
-                {msg}
-              </p>
-            ))}
-          </div>
-          <div className="mt-6 w-full bg-gray-800 rounded-full h-2">
-            <div
-              className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${Math.min(100, progress.length * 20)}%` }}
-            />
+        <div className="text-center max-w-xs">
+          <h1 className="text-xl font-bold mb-3">Search Benchmark</h1>
+          <p className="text-sm text-blue-400 mb-4">{progress[0] || 'Initializing...'}</p>
+          <div className="w-full bg-gray-800 rounded-full h-1.5">
+            <div className="bg-blue-500 h-1.5 rounded-full animate-pulse" style={{ width: '60%' }} />
           </div>
         </div>
       </div>
