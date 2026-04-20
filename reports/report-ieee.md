@@ -4,7 +4,7 @@
 
 ¹ *Bauman Moscow State Technical University, 5/1 2nd Baumanskaya st., Moscow, 105005, Russian Federation*
 
-*vasilymsl@student.bmstu.ru, aikanev@bmstu.ru*
+*maslovskiyvv@student.bmstu.ru, aikanev@bmstu.ru*
 
 ---
 
@@ -155,6 +155,8 @@ Table I shows the four quality metrics for each method.
 
 Hybrid retrieval achieves the best score on every metric. BM25 is a close second on MRR@10 (0.6364 vs 0.6534) and NDCG@10 (0.6740 vs 0.6941). Semantic retrieval alone is the weakest on all four metrics — a result we analyze in the Discussion.
 
+![Fig. 1. Retrieval-quality comparison on SciFact (300 queries) for the three methods. Hybrid (RRF) achieves the best value on all four metrics — MRR@10, Precision@5, Recall@5, and NDCG@10.](../docs/figures/fig1_quality.png)
+
 ### V.B. Per-Method Latency
 
 Table II reports mean and standard deviation of per-query latency for each method. Latency is measured end-to-end: BM25 includes tokenization and scoring; Semantic includes query encoding and similarity computation; Hybrid includes the full BM25 + Semantic + RRF fusion pipeline.
@@ -170,15 +172,19 @@ Table II reports mean and standard deviation of per-query latency for each metho
 
 BM25 is an order of magnitude faster than the two semantic variants because it avoids neural inference entirely. Hybrid is essentially BM25 + Semantic (the RRF fusion step itself is sub-microsecond). In the browser, WebAssembly overhead places Semantic latency in the 8–20 ms range, still well within interactive-use tolerance.
 
+![Fig. 2. Per-method query latency (mean with standard deviation error bars), measured in Node.js with native ONNX Runtime on Apple Silicon. BM25 is one order of magnitude faster than dense semantic retrieval.](../docs/figures/fig2_latency.png)
+
 ### V.C. Quality–Latency Trade-off
 
-Positioning each method on a quality–latency plane (Figure 3 in the live dashboard):
+Figure 3 positions each method on a quality–latency plane:
 
 - BM25 sits in the **top-left** (fast, decent quality).
 - Semantic sits in the **bottom-right** (slower, lower quality on this benchmark).
 - Hybrid sits in the **top-right** (best quality, latency comparable to Semantic).
 
 For most browser-side applications, the ~4 ms Hybrid latency is imperceptible to users, making Hybrid the preferred default. BM25 alone is the right choice when sub-millisecond latency is required or when the application cannot afford the 23 MB model download.
+
+![Fig. 3. Quality (MRR@10) versus latency (ms) trade-off. Hybrid attains the best quality at a latency comparable to Semantic, while BM25 achieves competitive quality with an order-of-magnitude lower latency.](../docs/figures/fig3_quality_vs_latency.png)
 
 ### V.D. Qualitative Analysis
 
@@ -223,6 +229,15 @@ Future work includes:
 - **Integration as the retrieval step of a fully browser-side RAG pipeline**, connecting to in-browser generative models (e.g., WebLLM).
 
 The full system — including dataset preparation scripts, precomputation scripts, the benchmark runner, and the interactive demo — is available at https://github.com/vasilymsl/search-benchmark, and the live demo is hosted at https://search-benchmark-nu.vercel.app.
+
+## Acknowledgement
+
+The author thanks Anton I. Kanev (Bauman MSTU, Department of Information
+Processing and Management Systems) for supervision and feedback throughout
+the research project. The SciFact dataset and relevance judgments are used
+under the BEIR benchmark license (Thakur et al., 2021); the
+`all-MiniLM-L6-v2` model is used under the Apache 2.0 license through the
+Hugging Face `Xenova/all-MiniLM-L6-v2` distribution.
 
 ## References
 
